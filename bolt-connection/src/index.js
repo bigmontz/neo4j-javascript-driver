@@ -17,6 +17,4 @@
  * limitations under the License.
  */
 
-import { loadBalancing } from 'neo4j-driver-bolt-connection'
-
-export default loadBalancing.LoadBalancingStrategy
+export * as loadBalancing from './load-balancing'
