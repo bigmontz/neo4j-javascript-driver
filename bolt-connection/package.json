@@ -17,6 +17,9 @@
     "neo4j",
     "driver"
   ],
+  "browser": {
+    "./lib/channel/node/index.js": "./lib/channel/browser/index.js"
+  },
   "author": "Neo4j",
   "license": "Apache-2.0",
   "bugs": {

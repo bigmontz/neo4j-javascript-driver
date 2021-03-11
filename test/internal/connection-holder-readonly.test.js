@@ -20,10 +20,10 @@
 import ConnectionHolder, {
   EMPTY_CONNECTION_HOLDER
 } from '../../src/internal/connection-holder'
-import SingleConnectionProvider from '../../src/internal/connection-provider-single'
+import SingleConnectionProvider from '../../bolt-connection/lib/connection-provider/connection-provider-single'
 import { READ, WRITE } from '../../src/driver'
 import FakeConnection from './fake-connection'
-import Connection from '../../src/internal/connection'
+import Connection from '../../bolt-connection/lib/connection/connection'
 import ReadOnlyConnectionHolder from '../../src/internal/connection-holder-readonly'
 
 describe('#unit ReadOnlyConnectionHolder wrapping EmptyConnectionHolder', () => {

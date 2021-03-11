@@ -16,8 +16,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import NodeChannel from '../../../src/internal/node/node-channel'
-import ChannelConfig from '../../../src/internal/channel-config'
+import NodeChannel from '../../../bolt-connection/lib/channel/node/node-channel'
+import ChannelConfig from '../../../bolt-connection/lib/channel/channel-config'
 import { error } from 'neo4j-driver-core'
 import ServerAddress from '../../../src/internal/server-address'
 import { connect } from 'net'

@@ -17,7 +17,7 @@
  * limitations under the License.
  */
 
-import RequestMessage from '../../../src/internal/bolt/request-message'
+import RequestMessage from '../../../bolt-connection/lib/bolt/request-message'
 import Bookmark from '../../../src/internal/bookmark'
 import TxConfig from '../../../src/internal/tx-config'
 import { int } from '../../../src'

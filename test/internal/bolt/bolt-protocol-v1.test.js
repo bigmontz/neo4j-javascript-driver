@@ -17,13 +17,13 @@
  * limitations under the License.
  */
 
-import BoltProtocolV1 from '../../../src/internal/bolt/bolt-protocol-v1'
-import RequestMessage from '../../../src/internal/bolt/request-message'
+import BoltProtocolV1 from '../../../bolt-connection/lib/bolt/bolt-protocol-v1'
+import RequestMessage from '../../../bolt-connection/lib/bolt/request-message'
 import Bookmark from '../../../src/internal/bookmark'
 import TxConfig from '../../../src/internal/tx-config'
 import { WRITE } from '../../../src/driver'
 import utils from '../test-utils'
-import { LoginObserver } from '../../../src/internal/bolt/stream-observers'
+import { LoginObserver } from '../../../bolt-connection/lib/bolt/stream-observers'
 
 describe('#unit BoltProtocolV1', () => {
   beforeEach(() => {

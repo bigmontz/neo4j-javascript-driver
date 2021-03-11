@@ -17,7 +17,7 @@
  * limitations under the License.
  */
 
-import ConnectionErrorHandler from '../../src/internal/connection-error-handler'
+import ConnectionErrorHandler from '../../bolt-connection/lib/connection/connection-error-handler'
 import { newError, error } from 'neo4j-driver-core'
 import ServerAddress from '../../src/internal/server-address'
 

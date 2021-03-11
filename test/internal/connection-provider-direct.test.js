@@ -18,12 +18,12 @@
  */
 
 import { READ } from '../../src/driver'
-import DirectConnectionProvider from '../../src/internal/connection-provider-direct'
-import Pool from '../../src/internal/pool'
+import DirectConnectionProvider from '../../bolt-connection/lib/connection-provider/connection-provider-direct'
+import Pool from '../../bolt-connection/lib/pool/pool'
 import ServerAddress from '../../src/internal/server-address'
-import Connection from '../../src/internal/connection'
+import Connection from '../../bolt-connection/lib/connection/connection'
 import Logger from '../../src/internal/logger'
-import DelegateConnection from '../../src/internal/connection-delegate'
+import DelegateConnection from '../../bolt-connection/lib/connection/connection-delegate'
 
 describe('#unit DirectConnectionProvider', () => {
   it('acquires connection from the pool', done => {

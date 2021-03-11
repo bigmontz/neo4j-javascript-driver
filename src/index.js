@@ -55,8 +55,10 @@ import {
   Result,
   ConnectionProvider
 } from 'neo4j-driver-core'
-import DirectConnectionProvider from './internal/connection-provider-direct'
-import RoutingConnectionProvider from './internal/connection-provider-routing'
+import {
+  DirectConnectionProvider,
+  RoutingConnectionProvider
+} from 'neo4j-driver-bolt-connection'
 
 const {
   util: { ENCRYPTION_ON, ENCRYPTION_OFF, assertString, isEmptyObjectOrNull }

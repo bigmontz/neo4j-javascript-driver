@@ -17,7 +17,7 @@
  * limitations under the License.
  */
 
-import NodeHostNameResolver from '../../../src/internal/node/node-host-name-resolver'
+import NodeHostNameResolver from '../../../bolt-connection/lib/channel/node/node-host-name-resolver'
 import ServerAddress from '../../../src/internal/server-address'
 
 describe('#unit NodeHostNameResolver', () => {

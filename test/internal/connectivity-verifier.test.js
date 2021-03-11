@@ -18,7 +18,7 @@
  */
 
 import ConnectivityVerifier from '../../src/internal/connectivity-verifier'
-import SingleConnectionProvider from '../../src/internal/connection-provider-single'
+import SingleConnectionProvider from '../../bolt-connection/lib/connection-provider/connection-provider-single'
 import FakeConnection from './fake-connection'
 
 describe('#unit ConnectivityVerifier', () => {

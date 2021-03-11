@@ -17,9 +17,9 @@
  * limitations under the License.
  */
 
-import { RawRoutingTable } from '../../src/internal/bolt'
-import Rediscovery from '../../src/internal/rediscovery'
-import RoutingTable from '../../src/internal/routing-table'
+import { RawRoutingTable } from '../../bolt-connection/lib/bolt'
+import Rediscovery from '../../bolt-connection/lib/rediscovery'
+import RoutingTable from '../../bolt-connection/lib/rediscovery/routing-table'
 import ServerAddress from '../../src/internal/server-address'
 import FakeConnection from './fake-connection'
 import lolex from 'lolex'
