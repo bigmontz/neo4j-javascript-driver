@@ -18,9 +18,12 @@
  */
 
 import ChannelConfig from '../../bolt-connection/lib/channel/channel-config'
-import { error } from 'neo4j-driver-core'
-import { ENCRYPTION_OFF, ENCRYPTION_ON } from '../../src/internal/util'
-import ServerAddress from '../../src/internal/server-address'
+import { error, internal } from 'neo4j-driver-core'
+
+const {
+  util: { ENCRYPTION_OFF, ENCRYPTION_ON },
+  serverAddress: { ServerAddress }
+} = internal
 
 const { SERVICE_UNAVAILABLE } = error
 

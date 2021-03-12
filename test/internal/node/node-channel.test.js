@@ -18,9 +18,11 @@
  */
 import NodeChannel from '../../../bolt-connection/lib/channel/node/node-channel'
 import ChannelConfig from '../../../bolt-connection/lib/channel/channel-config'
-import { error } from 'neo4j-driver-core'
-import ServerAddress from '../../../src/internal/server-address'
-import { connect } from 'net'
+import { error, internal } from 'neo4j-driver-core'
+
+const {
+  serverAddress: { ServerAddress }
+} = internal
 
 const { SERVICE_UNAVAILABLE } = error
 

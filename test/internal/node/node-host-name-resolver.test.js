@@ -18,7 +18,11 @@
  */
 
 import NodeHostNameResolver from '../../../bolt-connection/lib/channel/node/node-host-name-resolver'
-import ServerAddress from '../../../src/internal/server-address'
+import { internal } from 'neo4j-driver-core'
+
+const {
+  serverAddress: { ServerAddress }
+} = internal
 
 describe('#unit NodeHostNameResolver', () => {
   it('should resolve address', done => {

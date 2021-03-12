@@ -19,11 +19,15 @@
 
 import BoltProtocolV1 from '../../../bolt-connection/lib/bolt/bolt-protocol-v1'
 import RequestMessage from '../../../bolt-connection/lib/bolt/request-message'
-import Bookmark from '../../../src/internal/bookmark'
-import TxConfig from '../../../src/internal/tx-config'
 import { WRITE } from '../../../src/driver'
 import utils from '../test-utils'
 import { LoginObserver } from '../../../bolt-connection/lib/bolt/stream-observers'
+import { internal } from 'neo4j-driver-core'
+
+const {
+  bookmark: { Bookmark },
+  txConfig: { TxConfig }
+} = internal
 
 describe('#unit BoltProtocolV1', () => {
   beforeEach(() => {

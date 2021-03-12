@@ -19,8 +19,12 @@
 import DelegateConnection from '../../bolt-connection/lib/connection/connection-delegate'
 import Connection from '../../bolt-connection/lib/connection/connection'
 import { BoltProtocol } from '../../bolt-connection/lib/bolt'
-import BoltAddress from '../../src/internal/server-address'
 import ConnectionErrorHandler from '../../bolt-connection/lib/connection/connection-error-handler'
+import { internal } from 'neo4j-driver-core'
+
+const {
+  serverAddress: { ServerAddress: BoltAddress }
+} = internal
 
 describe('#unit DelegateConnection', () => {
   it('should delegate get id', () => {

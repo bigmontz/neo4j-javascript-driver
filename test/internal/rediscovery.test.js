@@ -20,10 +20,13 @@
 import { RawRoutingTable } from '../../bolt-connection/lib/bolt'
 import Rediscovery from '../../bolt-connection/lib/rediscovery'
 import RoutingTable from '../../bolt-connection/lib/rediscovery/routing-table'
-import ServerAddress from '../../src/internal/server-address'
 import FakeConnection from './fake-connection'
 import lolex from 'lolex'
-import { newError, error, int } from 'neo4j-driver-core'
+import { newError, error, int, internal } from 'neo4j-driver-core'
+
+const {
+  serverAddress: { ServerAddress }
+} = internal
 
 const { PROTOCOL_ERROR, SERVICE_UNAVAILABLE } = error
 

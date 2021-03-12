@@ -19,10 +19,13 @@
 
 import WebSocketChannel from '../../../bolt-connection/lib/channel/browser/browser-channel'
 import ChannelConfig from '../../../bolt-connection/lib/channel/channel-config'
-import { error } from 'neo4j-driver-core'
+import { error, internal } from 'neo4j-driver-core'
 import { setTimeoutMock } from '../timers-util'
-import { ENCRYPTION_OFF, ENCRYPTION_ON } from '../../../src/internal/util'
-import ServerAddress from '../../../src/internal/server-address'
+
+const {
+  serverAddress: { ServerAddress },
+  util: { ENCRYPTION_ON, ENCRYPTION_OFF }
+} = internal
 
 const { SERVICE_UNAVAILABLE } = error
 

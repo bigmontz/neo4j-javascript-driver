@@ -20,10 +20,14 @@
 import BoltProtocolV4x3 from '../../../bolt-connection/lib/bolt/bolt-protocol-v4x3'
 import RequestMessage from '../../../bolt-connection/lib/bolt/request-message'
 import utils from '../test-utils'
-import Bookmark from '../../../src/internal/bookmark'
-import TxConfig from '../../../src/internal/tx-config'
 import { WRITE } from '../../../src/driver'
 import { RouteObserver } from '../../../bolt-connection/lib/bolt/stream-observers'
+import { internal } from 'neo4j-driver-core'
+
+const {
+  txConfig: { TxConfig },
+  bookmark: { Bookmark }
+} = internal
 
 describe('#unit BoltProtocolV4x3', () => {
   beforeEach(() => {

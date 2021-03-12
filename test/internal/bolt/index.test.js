@@ -19,12 +19,11 @@
 import Bolt from '../../../bolt-connection/lib/bolt'
 import DummyChannel from '../dummy-channel'
 import { alloc } from '../../../bolt-connection/lib/channel'
-import { newError } from 'neo4j-driver-core'
+import { newError, internal } from 'neo4j-driver-core'
 import {
   Chunker,
   Dechunker
 } from '../../../bolt-connection/lib/channel/chunking'
-import Logger from '../../../src/internal/logger'
 
 import BoltProtocolV1 from '../../../bolt-connection/lib/bolt/bolt-protocol-v1'
 import BoltProtocolV2 from '../../../bolt-connection/lib/bolt/bolt-protocol-v2'
@@ -33,6 +32,10 @@ import BoltProtocolV4x0 from '../../../bolt-connection/lib/bolt/bolt-protocol-v4
 import BoltProtocolV4x1 from '../../../bolt-connection/lib/bolt/bolt-protocol-v4x1'
 import BoltProtocolV4x2 from '../../../bolt-connection/lib/bolt/bolt-protocol-v4x2'
 import BoltProtocolV4x3 from '../../../bolt-connection/lib/bolt/bolt-protocol-v4x3'
+
+const {
+  logger: { Logger }
+} = internal
 
 describe('#unit Bolt', () => {
   describe('handshake', () => {
