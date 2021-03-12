@@ -18,7 +18,6 @@
  */
 
 import BaseBuffer from './base-buf'
-import CombinedBuffer from './combined-buf'
 
 export default BaseBuffer
-export { BaseBuffer, CombinedBuffer }
+export { BaseBuffer }

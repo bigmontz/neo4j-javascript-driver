@@ -17,7 +17,7 @@
  * limitations under the License.
  */
 
-import CombinedBuffer from '../../bolt-connection/lib/buf/combined-buf'
+import CombinedBuffer from '../../bolt-connection/lib/channel/combined-buf'
 import { alloc, utf8 } from '../../bolt-connection/lib/channel'
 
 describe('#unit UTF8Encoding', () => {

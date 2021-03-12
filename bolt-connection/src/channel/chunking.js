@@ -19,7 +19,7 @@
 
 import BaseBuffer from '../buf/base-buf'
 import { alloc } from './node'
-import CombinedBuffer from '../buf/combined-buf'
+import CombinedBuffer from './combined-buf'
 
 const _CHUNK_HEADER_SIZE = 2
 const _MESSAGE_BOUNDARY = 0x00

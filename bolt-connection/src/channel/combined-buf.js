@@ -17,8 +17,8 @@
  * limitations under the License.
  */
 
-import BaseBuffer from './base-buf'
-import { alloc } from '../channel'
+import { BaseBuffer } from '../buf'
+import { alloc } from './node'
 
 /**
  * Buffer that combines multiple buffers, exposing them as one single buffer.
