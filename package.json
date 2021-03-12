@@ -22,7 +22,7 @@
     "docs": "esdoc -c esdoc.json",
     "versionRelease": "gulp set --x $VERSION && npm version $VERSION --no-git-tag-version",
     "browser": "gulp browser && gulp test-browser",
-    "prepack": "cd core && npm pack && cd .. && npm i ./core/neo4j-driver-core-4.3.0.tgz && cd bolt-connection && npm pack && cd .. && npm i ./core/neo4j-driver-bolt-connection-4.3.0.tgz"
+    "prepack": "cd core && npm pack && cd .. && npm i ./core/neo4j-driver-core-4.3.0.tgz && cd bolt-connection && npm pack && cd .. && npm i ./bolt-connection/neo4j-driver-bolt-connection-4.3.0.tgz"
   },
   "husky": {
     "hooks": {
