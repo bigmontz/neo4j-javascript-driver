@@ -100,6 +100,7 @@ export default class Context {
   }
 
   getShouldRunTestFunction() {
+    console.log('Calling getShouldRunTestFunction', this._shouldRunTest)
     return this._shouldRunTest
   }
 

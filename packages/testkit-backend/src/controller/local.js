@@ -1,5 +1,5 @@
-import Context from '../context'
-import Controller from './interface'
+import Context from '../context.js'
+import Controller from './interface.js'
 
 
 /**

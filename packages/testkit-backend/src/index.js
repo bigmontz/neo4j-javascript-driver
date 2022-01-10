@@ -2,8 +2,10 @@ import Backend from './backend'
 import { SocketChannel, WebSocketChannel } from './channel'
 import { LocalController, RemoteController } from './controller'
 import { getShouldRunTest } from './skipped-tests'
-import * as REQUEST_HANDLERS from './request-handlers'
-
+import handlers from './request-handlers'
+import neo4j from './neo4j'
+import tls from 'tls'
+import ResultObserver from './result-observer'
 /**
  * Responsible for configure and run the backend server.
  */
@@ -30,7 +32,7 @@ function main( ) {
     if ( testEnviroment.toUpperCase() === 'REMOTE' ) {
       return new RemoteController(webserverPort)
     }
-    return new LocalController(REQUEST_HANDLERS, shouldRunTest)
+    return new LocalController(handlers(neo4j, ResultObserver, tls), shouldRunTest)
   }
 
   const backend = new Backend(newController, newChannel)

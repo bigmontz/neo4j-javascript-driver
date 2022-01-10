@@ -1,4 +1,4 @@
-import skip, { ifEquals, ifEndsWith } from './skip'
+import skip, { ifEquals, ifEndsWith } from './skip.js'
 
 const skippedTests = [
   skip(

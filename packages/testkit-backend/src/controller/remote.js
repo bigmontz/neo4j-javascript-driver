@@ -1,4 +1,4 @@
-import Controller from "./interface"
+import Controller from "./interface.js"
 import { WebSocketServer } from "ws"
 import { createServer } from "http"
 import { Server } from "node-static"

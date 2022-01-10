@@ -1,4 +1,5 @@
-import { EventEmitter } from "events"
+import { EventEmitter } from 'https://deno.land/x/event_emitter/mod.ts';
+
 
 /**
  * Defines the interface used for receiving commands form teskit.
