@@ -2,19 +2,15 @@ FROM ubuntu:20.04
 
 ENV DEBIAN_FRONTEND noninteractive
 ENV NODE_OPTIONS --max_old_space_size=4096
+SHELL ["/bin/bash", "--login", "-c"]
 
 RUN apt-get update && \
     apt-get install -y \
         git \
         curl \
         python3 \
-        nodejs \
-        npm \
         firefox \
     && rm -rf /var/lib/apt/lists/*
-
-RUN npm install -g npm@7 \
-    && /bin/bash -c "hash -d npm"
 
 # Enable tls v1.0
 RUN echo "openssl_conf = openssl_configuration\n"|cat - /etc/ssl/openssl.cnf > /tmp/openssl_conf.cnf \
@@ -41,4 +37,11 @@ USER driver
 WORKDIR /home/driver
 CMD /bin/bash
 RUN mkdir /home/driver/.npm_global
+
+# Configuring NodeJS version
+RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.1/install.sh | bash
+RUN nvm install ${NODE_VERSION:=10}
+RUN nvm use ${NODE_VERSION:=10}
+
+# Confiugure home directory
 RUN npm config set prefix /home/driver/.npm_global
