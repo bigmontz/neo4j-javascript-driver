@@ -51,6 +51,9 @@ const READ_MODE = 'r'
 
 const NO_STATEMENT_ID = -1
 
+const BEGIN_STREAMING = 0xFF // BEGIN STREAMING
+const END_STREAMING = 0xFE // END_STREAMING
+
 const SIGNATURES = Object.freeze({
   INIT,
   RESET,
@@ -65,7 +68,9 @@ const SIGNATURES = Object.freeze({
   LOGON,
   LOGOFF,
   DISCARD,
-  PULL
+  PULL,
+  BEGIN_STREAMING,
+  END_STREAMING
 })
 
 export default class RequestMessage {
@@ -414,6 +419,22 @@ export default class RequestMessage {
         `ROUTE ${json.stringify(routingContext)} ${json.stringify(
           bookmarks
         )} ${json.stringify(dbContext)}`
+    )
+  }
+
+  static beginStreaming ({ from }) {
+    return new RequestMessage(
+      BEGIN_STREAMING,
+      [ from ],
+      () => `BEGIN_STREAMING ${json.stringify(from)}`
+    )
+  }
+
+  static endStreaming () {
+    return new RequestMessage(
+      END_STREAMING,
+      [],
+      () => `END_STREAMING`
     )
   }
 }

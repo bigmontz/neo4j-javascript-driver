@@ -33,7 +33,7 @@ const { EMPTY_CONNECTION_HOLDER } = connectionHolder
  * @param {Error} error The error
  * @returns {void}
  */
-const DEFAULT_ON_ERROR = (error: Error): void => {
+export const DEFAULT_ON_ERROR = (error: Error): void => {
   // eslint-disable-next-line @typescript-eslint/restrict-plus-operands, @typescript-eslint/no-base-to-string
   console.log('Uncaught error when processing result: ' + error)
 }
@@ -43,14 +43,14 @@ const DEFAULT_ON_ERROR = (error: Error): void => {
  * @param {ResultSummary} summary
  * @returns {void}
  */
-const DEFAULT_ON_COMPLETED = (summary: ResultSummary): void => {}
+export const DEFAULT_ON_COMPLETED = (summary: ResultSummary): void => {}
 
 /**
  * @private
  * @param {string[]} keys List of keys of the record in the result
  * @return {void}
  */
-const DEFAULT_ON_KEYS = (keys: string[]): void => {}
+export const DEFAULT_ON_KEYS = (keys: string[]): void => {}
 
 /**
  * The query result is the combination of the {@link ResultSummary} and

@@ -171,4 +171,57 @@ export default class BoltProtocol extends BoltProtocolV5x1 {
 
     return observer
   }
+
+  beginStreaming ({ from }, {
+    beforeKeys,
+    afterKeys,
+    beforeError,
+    afterError,
+    beforeComplete,
+    afterComplete,
+    flush = true,
+    reactive = false,
+    fetchSize = FETCH_ALL,
+  }) {
+
+    const context = {
+      endAlreadyCalled: false
+    }
+    const observer = new ResultStreamObserver({
+      server: this._server,
+      reactive: reactive,
+      fetchSize: fetchSize,
+      moreFunction: this._requestMore.bind(this),
+      discardFunction: (_qid, observer) => {
+        if (context.endAlreadyCalled) {
+          return
+        }
+        this.endAlreadyCalled = true
+        this.endStreaming(observer, true)
+        this.updateCurrentObserver()
+      },
+      beforeKeys,
+      afterKeys,
+      beforeError,
+      afterError,
+      beforeComplete,
+      afterComplete,
+    })
+
+    observer.prepareToHandleStreamingResponse()
+
+    this.write(
+      RequestMessage.beginStreaming({ from }),
+      observer,
+      flush
+    )
+    
+    this.queueObserverIfProtocolIsNotBroken(observer)
+
+    return observer
+  }
+
+  endStreaming (observer, flush = true) {
+    this.write(RequestMessage.endStreaming(), observer, flush)
+  }
 }

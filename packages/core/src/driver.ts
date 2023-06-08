@@ -48,6 +48,7 @@ import resultTransformers, { ResultTransformer } from './result-transformers'
 import QueryExecutor from './internal/query-executor'
 import { newError } from './error'
 import NotificationFilter from './notification-filter'
+import CdcStreamingResult, { OpenCdcStreamingResultConfig } from './result-streaming-cdc'
 
 const DEFAULT_MAX_CONNECTION_LIFETIME: number = 60 * 60 * 1000 // 1 hour
 
@@ -328,6 +329,8 @@ class SessionConfig {
   }
 }
 
+type OpenCdcStreamingConfig = Omit<OpenCdcStreamingResultConfig, 'connectionProvider'>
+
 type RoutingControl = 'WRITE' | 'READ'
 const ROUTING_WRITE: RoutingControl = 'WRITE'
 const ROUTING_READ: RoutingControl = 'READ'
@@ -571,6 +574,13 @@ class Driver {
       database: config.database,
       impersonatedUser: config.impersonatedUser
     }, query, parameters)
+  }
+
+  async openCdcStreaming(config: OpenCdcStreamingConfig): Promise<CdcStreamingResult> {
+    return await CdcStreamingResult.open({ 
+      ...config,
+      connectionProvider: this._getOrCreateConnectionProvider()
+     })
   }
 
   /**

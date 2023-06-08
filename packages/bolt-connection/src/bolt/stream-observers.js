@@ -173,6 +173,9 @@ class ResultStreamObserver extends StreamObserver {
    */
   cancel () {
     this._discard = true
+    if (this._handlingStreaming) {
+      this._more()
+    } 
   }
 
   /**
@@ -189,6 +192,10 @@ class ResultStreamObserver extends StreamObserver {
     this._head = []
     this._fieldKeys = []
     this._setState(_states.STREAMING)
+  }
+
+  prepareToHandleStreamingResponse () {
+    this._handlingStreaming = true
   }
 
   /**
@@ -336,7 +343,7 @@ class ResultStreamObserver extends StreamObserver {
             }
           })
         }
-
+    
         if (this._afterKeys) {
           this._afterKeys(this._fieldKeys)
         }
