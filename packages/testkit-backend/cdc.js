@@ -3,7 +3,7 @@ import neo4j from 'neo4j-driver-lite'
 
 const database = 'cdctest'
 const driver = neo4j.driver('neo4j://localhost:7687', neo4j.auth.none(), {
-  logging: neo4j.logging.console('info')
+  logging: neo4j.logging.console('debug')
 })
 
 //await driver.executeQuery('CREATE DATABASE cdctest OPTIONS {txLogEnrichment: "FULL"}')

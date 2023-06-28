@@ -19,7 +19,7 @@
 
 import Connection from "./connection"
 import ConnectionProvider from "./connection-provider"
-import { PROTOCOL_ERROR, newError } from "./error"
+import { PROTOCOL_ERROR, isRetriableError, newError } from "./error"
 import { ConnectionHolder } from "./internal/connection-holder"
 import { ACCESS_MODE_READ } from "./internal/constants"
 import { ResultStreamObserver } from "./internal/observers"
@@ -42,6 +42,12 @@ interface QueuedResultObserver extends ResultObserver {
 }
 
 
+const DEFAULT_MAX_RETRY_TIME_MS = 30 * 1000 // 30 seconds
+const DEFAULT_INITIAL_RETRY_DELAY_MS = 1000 // 1 seconds
+const DEFAULT_RETRY_DELAY_MULTIPLIER = 2.0
+const DEFAULT_RETRY_DELAY_JITTER_FACTOR = 0.2
+
+
 export default class CdcStreamingResult {
 
   static async open ({
@@ -49,15 +55,82 @@ export default class CdcStreamingResult {
     from,
     connectionProvider
   }: OpenCdcStreamingResultConfig): Promise<CdcStreamingResult> {
+    function createConnectionHolder () {
+      return new ConnectionHolder({
+        mode: ACCESS_MODE_READ,
+        database,
+        connectionProvider
+      })
+    }
 
-    const connectionHolder = new ConnectionHolder({
-      mode: ACCESS_MODE_READ,
-      database,
-      connectionProvider
-    })
+    
+    const context = {
+      connectionHolder: createConnectionHolder(),
+      maxRetryTimeMs: DEFAULT_MAX_RETRY_TIME_MS,
+      initialRetryDelayMs: DEFAULT_INITIAL_RETRY_DELAY_MS,
+      multiplier: DEFAULT_RETRY_DELAY_MULTIPLIER,
+      jitterFactor: DEFAULT_RETRY_DELAY_JITTER_FACTOR,
+      retryDelay: DEFAULT_INITIAL_RETRY_DELAY_MS,
+      inFlightTimeoutIds: [] as NodeJS.Timeout[],
+      retryStartTime: -1
+    }
 
-    if (connectionHolder.initializeConnection()) {
-      const connection = await connectionHolder.getConnection() as Connection
+
+    function computeDelayWithJitter (delayMs: number) {
+      const jitter = delayMs * context.jitterFactor
+      const min = delayMs - jitter
+      const max = delayMs + jitter
+      return Math.random() * (max - min) + min
+    }
+
+    async function recover (from: string, error: Error): Promise<ResultStreamObserver> {
+      if (context.retryStartTime == -1) {
+        context.retryStartTime = Date.now()
+      }
+      const elapsedTimeMs = Date.now() - context.retryStartTime
+      if (elapsedTimeMs > context.maxRetryTimeMs || !isRetriableError(error)) {
+        throw error
+      }
+
+      await context.connectionHolder.close().catch(() => {}) // ignore any error here
+      context.connectionHolder = createConnectionHolder()
+    
+      try { 
+        return await new Promise((resolve, reject) => {
+          const timeoutId = setTimeout(() => {
+              // filter out this timeoutId when time has come and function is being executed
+              context.inFlightTimeoutIds = context.inFlightTimeoutIds.filter(
+                id => id !== timeoutId
+              )
+              if (context.connectionHolder.initializeConnection()) {
+                context.connectionHolder.getConnection()
+                  .then(connection => connection?.protocol().beginStreaming({
+                    from
+                  }, {}) as Promise<ResultStreamObserver>)
+                  .then((value) => {
+                    context.retryStartTime = -1
+                    resolve(value)
+                  }, reject)
+                } else {
+                  reject(new Error('Cant acquire connection to open streaming'))
+                }
+            }, context.retryDelay)
+      
+            context.inFlightTimeoutIds.push(timeoutId)
+            context.retryDelay = computeDelayWithJitter(context.retryDelay)
+        })
+      } catch (e) {
+        return await recover(from, e)
+      }
+    }
+
+    async function releaseConnection () {
+      context.inFlightTimeoutIds.forEach(clearTimeout)
+      context.connectionHolder.close()
+
+    }
+    if (context.connectionHolder.initializeConnection()) {
+      const connection = await context.connectionHolder.getConnection() as Connection
       const observer = connection.protocol().beginStreaming({
         from
       }, {})
@@ -65,7 +138,8 @@ export default class CdcStreamingResult {
       return new CdcStreamingResult(
         observer,
         from,
-        connectionHolder.close.bind(connectionHolder)
+        releaseConnection,
+        recover
       ) 
     } else {
       throw new Error('Cant acquire connection to open streaming')
@@ -81,6 +155,7 @@ export default class CdcStreamingResult {
     private _observer: ResultStreamObserver,  
     private _currentChangeIdentifier: string,
     private _releaseConnection: () => Promise<void>,
+    private _recover: (from: string, errorToRecover: Error) => Promise<ResultStreamObserver>
     
   ) {
     this._closed = false
@@ -90,6 +165,16 @@ export default class CdcStreamingResult {
     if (this._completionPromise) {
       throw new Error('already subscribed')
     }
+
+    this._completionPromise = new Promise((resolve, reject)  => {
+      this._resolveCompletionPromise = resolve
+      this._rejectCompletionPromise = reject
+    })
+
+    this._subscribe(observer)
+  }
+
+  private _subscribe(observer: ResultObserver): void {
     const DEFAULT_ON_NEXT = (record: Record) => {}
 
     const onCompletedOriginal = observer.onCompleted ?? DEFAULT_ON_COMPLETED
@@ -97,19 +182,21 @@ export default class CdcStreamingResult {
     const onKeysOriginal = observer.onKeys ?? DEFAULT_ON_KEYS
     const onNextOriginal = observer.onNext ?? DEFAULT_ON_NEXT
 
-    this._completionPromise = new Promise((resolve, reject)  => {
-      this._resolveCompletionPromise = resolve
-      this._rejectCompletionPromise = reject
-    })
-
     const onCompletedWrapper = (metadata: any): void => {
       this._resolveCompletionPromise?.call(this._resolveCompletionPromise)
       return onCompletedOriginal.call(observer, new ResultSummary('not query', {}, {}))
     }
 
     const onErrorWrapper = (error: Error): void => {
-      this._rejectCompletionPromise?.call(this._rejectCompletionPromise)
-      onErrorOriginal.call(observer, error)
+      this._recover(this._currentChangeIdentifier, error)
+        .then(newObserver => {
+          this._observer = newObserver
+          this._subscribe(observer)
+        })
+        .catch(e => {
+          this._rejectCompletionPromise?.call(this._rejectCompletionPromise)
+          onErrorOriginal.call(observer, error)
+        })
     }
 
     const onNextWrapper = (record: Record): void => {
