@@ -64,6 +64,7 @@ export default class CdcStreamingResult {
 
       return new CdcStreamingResult(
         observer,
+        from,
         connectionHolder.close.bind(connectionHolder)
       ) 
     } else {
@@ -75,10 +76,10 @@ export default class CdcStreamingResult {
   private _resolveCompletionPromise?: () => void
   private _rejectCompletionPromise?: (e: Error) => void
   private _closed: boolean
-  
 
   private constructor(
-    private _observer: ResultStreamObserver,
+    private _observer: ResultStreamObserver,  
+    private _currentChangeIdentifier: string,
     private _releaseConnection: () => Promise<void>,
     
   ) {
@@ -89,10 +90,12 @@ export default class CdcStreamingResult {
     if (this._completionPromise) {
       throw new Error('already subscribed')
     }
+    const DEFAULT_ON_NEXT = (record: Record) => {}
 
     const onCompletedOriginal = observer.onCompleted ?? DEFAULT_ON_COMPLETED
     const onErrorOriginal = observer.onError ?? DEFAULT_ON_ERROR
     const onKeysOriginal = observer.onKeys ?? DEFAULT_ON_KEYS
+    const onNextOriginal = observer.onNext ?? DEFAULT_ON_NEXT
 
     this._completionPromise = new Promise((resolve, reject)  => {
       this._resolveCompletionPromise = resolve
@@ -109,8 +112,14 @@ export default class CdcStreamingResult {
       onErrorOriginal.call(observer, error)
     }
 
+    const onNextWrapper = (record: Record): void => {
+      // @ts-expect-error
+      this._currentChangeIdentifier = record._fields[0]
+      onNextOriginal.call(observer, record)
+    }
+
     this._observer.subscribe({
-      onNext: (observer.onNext != null) ? observer.onNext.bind(observer) : undefined,
+      onNext: onNextWrapper,
       onKeys: onKeysOriginal,
       onCompleted: onCompletedWrapper,
       onError: onErrorWrapper

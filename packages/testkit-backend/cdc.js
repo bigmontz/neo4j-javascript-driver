@@ -2,18 +2,25 @@
 import neo4j from 'neo4j-driver-lite'
 
 const database = 'cdctest'
-const driver = neo4j.driver('neo4j://localhost:7687', neo4j.auth.none())
+const driver = neo4j.driver('neo4j://localhost:7687', neo4j.auth.none(), {
+  logging: neo4j.logging.console('info')
+})
 
-// await driver.executeQuery('CREATE DATABASE cdctest OPTIONS {txLogEnrichment: "FULL"}')
+//await driver.executeQuery('CREATE DATABASE cdctest OPTIONS {txLogEnrichment: "FULL"}')
 
 await driver.getServerInfo({ database })
 
-const { records: [cdcEarliestRecord]} = await driver.executeQuery('CALL cdc.earliest()', {}, {
-  database,
-  routing: 'READ'
-})
+let [, , from] = process.argv
 
-const from = cdcEarliestRecord.get('id')
+if (from == null) {
+  
+  const { records: [cdcEarliestRecord]} = await driver.executeQuery('CALL cdc.earliest()', {}, {
+    database,
+    routing: 'READ'
+  })
+
+  from = cdcEarliestRecord.get('id')
+}
 
 console.log(`Reading from ${from}`)
 
@@ -24,7 +31,7 @@ process.on('SIGINT', async () => {
   await driver.close()
 })
 
-readableStream(cdcStream)
+await asyncIterator(cdcStream)
 
 function subscription (stream) {
   stream.subscribe({
@@ -48,7 +55,8 @@ async function callback (stream) {
 
 async function asyncIterator (stream) {
   for await (const record of stream) {
-    console.log('CDC => ', JSON.stringify(record, null, 4))
+    //console.log('CDC => ', JSON.stringify(record, null, 4))
+    console.log(`[${Date.now()}] Reading changes ${record._fields[0]} => current id ${stream._currentChangeIdentifier}`)
   }
   
   console.log('Finished')
