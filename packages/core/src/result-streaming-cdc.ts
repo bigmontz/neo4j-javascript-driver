@@ -113,6 +113,9 @@ export default class CdcStreamingResult {
     }
 
     const onNextWrapper = (record: Record): void => {
+      if (this._closed) {
+        return
+      }
       // @ts-expect-error
       this._currentChangeIdentifier = record._fields[0]
       onNextOriginal.call(observer, record)
