@@ -181,16 +181,16 @@ export default class BoltProtocol extends BoltProtocolV5x1 {
     afterComplete,
     flush = true,
     reactive = false,
-    fetchSize = FETCH_ALL,
+    fetchSize = 5,
   }) {
-
+    
     const context = {
       endAlreadyCalled: false
     }
     const observer = new ResultStreamObserver({
       server: this._server,
       reactive: reactive,
-      fetchSize: fetchSize,
+      fetchSize: 5,
       moreFunction: this._requestMore.bind(this),
       discardFunction: (_qid, observer) => {
         if (context.endAlreadyCalled) {
@@ -205,7 +205,7 @@ export default class BoltProtocol extends BoltProtocolV5x1 {
       beforeError,
       afterError,
       beforeComplete,
-      afterComplete,
+      afterComplete
     })
 
     observer.prepareToHandleStreamingResponse()
@@ -213,10 +213,15 @@ export default class BoltProtocol extends BoltProtocolV5x1 {
     this.write(
       RequestMessage.beginStreaming({ from }),
       observer,
-      flush
+      reactive && flush
     )
+
+    if (!reactive) {
+      this.write(RequestMessage.pull({ n: 5 }), observer, flush)
+    }
+
     
-    this.queueObserverIfProtocolIsNotBroken(observer)
+    //this.queueObserverIfProtocolIsNotBroken(observer)
 
     return observer
   }

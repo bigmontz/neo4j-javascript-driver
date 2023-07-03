@@ -32,6 +32,7 @@ export interface OpenCdcStreamingResultConfig {
   database: string, 
   from: string,
   connectionProvider: ConnectionProvider
+  fetchSize: number
 }
 
 interface QueuedResultObserver extends ResultObserver {
@@ -53,7 +54,8 @@ export default class CdcStreamingResult {
   static async open ({
     database,
     from,
-    connectionProvider
+    connectionProvider,
+    fetchSize
   }: OpenCdcStreamingResultConfig): Promise<CdcStreamingResult> {
     function createConnectionHolder () {
       return new ConnectionHolder({
@@ -105,7 +107,8 @@ export default class CdcStreamingResult {
               if (context.connectionHolder.initializeConnection()) {
                 context.connectionHolder.getConnection()
                   .then(connection => connection?.protocol().beginStreaming({
-                    from
+                    from,
+                    fetchSize
                   }, {}) as Promise<ResultStreamObserver>)
                   .then((value) => {
                     context.retryStartTime = -1
@@ -132,7 +135,8 @@ export default class CdcStreamingResult {
     if (context.connectionHolder.initializeConnection()) {
       const connection = await context.connectionHolder.getConnection() as Connection
       const observer = connection.protocol().beginStreaming({
-        from
+        from,
+        fetchSize
       }, {})
 
       return new CdcStreamingResult(

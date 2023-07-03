@@ -579,6 +579,7 @@ class Driver {
   async openCdcStreaming(config: OpenCdcStreamingConfig): Promise<CdcStreamingResult> {
     return await CdcStreamingResult.open({ 
       ...config,
+      fetchSize: this._config.fetchSize!,
       connectionProvider: this._getOrCreateConnectionProvider()
      })
   }

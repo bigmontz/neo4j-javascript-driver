@@ -19,7 +19,7 @@ const intervalId  = setInterval(async () => {
     })
     
   console.log('user created')
-}, 200)
+}, 20)
 
 
 

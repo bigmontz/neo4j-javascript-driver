@@ -1,20 +1,21 @@
 
 import neo4j from 'neo4j-driver-lite'
+import { stressTest } from './stress.test.js'
 
 const database = 'cdctest'
 const driver = neo4j.driver('neo4j://localhost:7687', neo4j.auth.none(), {
   logging: neo4j.logging.console('debug')
 })
 
-//await driver.executeQuery('CREATE DATABASE cdctest OPTIONS {txLogEnrichment: "FULL"}')
+// await driver.executeQuery('CREATE DATABASE cdctest OPTIONS {txLogEnrichment: "FULL"}')
 
 await driver.getServerInfo({ database })
 
 let [, , from] = process.argv
 
 if (from == null) {
-  
-  const { records: [cdcEarliestRecord]} = await driver.executeQuery('CALL cdc.earliest()', {}, {
+
+  const { records: [cdcEarliestRecord] } = await driver.executeQuery('CALL cdc.earliest()', {}, {
     database,
     routing: 'READ'
   })
@@ -26,14 +27,23 @@ console.log(`Reading from ${from}`)
 
 const cdcStream = await driver.openCdcStreaming({ database, from })
 
-process.on('SIGINT', async () => {  
+process.on('SIGINT', async () => {
   await cdcStream.close()
   await driver.close()
 })
 
-await asyncIterator(cdcStream)
+asyncIterator(cdcStream)
+  .finally(() => {
+    console.log('it is over')
+  })
 
-function subscription (stream) {
+// stressTest(driver)
+//   .finally(async () => {
+//     //await cdcStream.close()
+//     await driver.close()
+//    })
+
+function subscription(stream) {
   stream.subscribe({
     onNext(record) {
       console.log('CDC => ', JSON.stringify(record, null, 4))
@@ -47,24 +57,27 @@ function subscription (stream) {
   })
 }
 
-async function callback (stream) {
+async function callback(stream) {
   await stream.consume(record => console.log('CDC => ', JSON.stringify(record, null, 4)))
-  
+
   console.log('finished')
 }
 
-async function asyncIterator (stream) {
+async function asyncIterator(stream) {
+  let i = 0
   for await (const record of stream) {
+    i = i + 1
     //console.log('CDC => ', JSON.stringify(record, null, 4))
     console.log(`[${Date.now()}] Reading changes ${record._fields[0]} => current id ${stream._currentChangeIdentifier}`)
   }
-  
-  console.log('Finished')
+
+  console.log('Finished', i)
 }
 
 
-function readableStream (stream) {
+function readableStream(stream) {
   stream.toReadableStream()
     .on('data', cursor => console.log('cursor', cursor))
     .on('end', () => console.log('finished'))
 }
+
