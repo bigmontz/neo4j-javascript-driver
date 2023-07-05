@@ -403,6 +403,9 @@ export default class CdcStreamingResult {
   }
 
   async close (): Promise<void> {
+    if (this._closed) {
+      return;
+    }
     this._closed = true
     this._observer.cancel()
     await this._getOrCreateCompletionPromise()
