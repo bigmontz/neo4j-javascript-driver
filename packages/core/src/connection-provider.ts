@@ -49,6 +49,7 @@ class ConnectionProvider {
   acquireConnection (param?: {
     accessMode?: string
     database?: string
+    databaseId?: string
     bookmarks: bookmarks.Bookmarks
     impersonatedUser?: string
     onDatabaseNameResolved?: (databaseName?: string) => void

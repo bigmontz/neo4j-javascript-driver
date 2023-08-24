@@ -488,6 +488,19 @@ export default class BoltProtocol {
     }
   }
 
+
+  pinDatabase ({ database, impersonatedUser }) {
+    throw new Error("PinDatabase is not supported") 
+  }
+
+  unpinDatabase () {
+    throw new Error('PinDatabase is not supported')
+  }
+
+  supportsPin () {
+    return false;
+  }
+
   isLastMessageLogon () {
     return this._lastMessageSignature === SIGNATURES.HELLO ||
       this._lastMessageSignature === SIGNATURES.LOGON

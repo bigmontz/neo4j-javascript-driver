@@ -39,6 +39,8 @@ const BEGIN = 0x11 // 0001 0001 // BEGIN <metadata>
 const COMMIT = 0x12 // 0001 0010 // COMMIT
 const ROLLBACK = 0x13 // 0001 0011 // ROLLBACK
 const ROUTE = 0x66 // 0110 0110 // ROUTE
+const PIN_DATABASE = 0x68 // 0110 1000 // PIN_DATABASE
+const UNPIN_DATABASE = 0x69 // 0110 1001 // UNPIN_DATABASE
 
 const LOGON = 0x6A // LOGON
 const LOGOFF = 0x6B // LOGOFF
@@ -62,6 +64,8 @@ const SIGNATURES = Object.freeze({
   COMMIT,
   ROLLBACK,
   ROUTE,
+  PIN_DATABASE,
+  UNPIN_DATABASE,
   LOGON,
   LOGOFF,
   DISCARD,
@@ -416,7 +420,31 @@ export default class RequestMessage {
         )} ${json.stringify(dbContext)}`
     )
   }
+
+  static pinDatabase ({ databaseName, impersonatedUser }) {
+    const meta = {}
+
+    if (databaseName != null) {
+      meta.db = databaseName
+    }
+
+    if (impersonatedUser != null) {
+      meta.imp_user = impersonatedUser
+    }
+
+    return new RequestMessage(
+      PIN_DATABASE,
+      [meta],
+      () => `PIN_DATABASE ${json.stringify(meta)}`
+    )
+  }
+
+  static unpinDatabase () {
+    return UNPIN_DATABASE_MESSAGE
+  }
 }
+
+
 
 /**
  * Create an object that represent transaction metadata.
@@ -480,6 +508,7 @@ const RESET_MESSAGE = new RequestMessage(RESET, [], () => 'RESET')
 const COMMIT_MESSAGE = new RequestMessage(COMMIT, [], () => 'COMMIT')
 const ROLLBACK_MESSAGE = new RequestMessage(ROLLBACK, [], () => 'ROLLBACK')
 const GOODBYE_MESSAGE = new RequestMessage(GOODBYE, [], () => 'GOODBYE')
+const UNPIN_DATABASE_MESSAGE = new RequestMessage(UNPIN_DATABASE, [], () => 'UNPIN_DATABASE_MESSAGE')
 
 export {
   SIGNATURES

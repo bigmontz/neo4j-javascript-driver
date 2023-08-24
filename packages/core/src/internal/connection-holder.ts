@@ -87,6 +87,7 @@ class ConnectionHolder implements ConnectionHolderInterface {
   private readonly _getConnectionAcquistionBookmarks: () => Promise<Bookmarks>
   private readonly _onDatabaseNameResolved?: (databaseName?: string) => void
   private readonly _auth?: AuthToken
+  private _databaseId?: string
   private _closed: boolean
 
   /**
@@ -141,8 +142,9 @@ class ConnectionHolder implements ConnectionHolderInterface {
     return this._database
   }
 
-  setDatabase (database?: string): void {
+  setDatabase (database?: string, databaseId?: string): void {
     this._database = database
+    this._databaseId = databaseId
   }
 
   bookmarks (): Bookmarks {
@@ -172,6 +174,7 @@ class ConnectionHolder implements ConnectionHolderInterface {
     return await connectionProvider.acquireConnection({
       accessMode: this._mode,
       database: this._database,
+      databaseId: this._databaseId,
       bookmarks: await this._getBookmarks(),
       impersonatedUser: this._impersonatedUser,
       onDatabaseNameResolved: this._onDatabaseNameResolved,

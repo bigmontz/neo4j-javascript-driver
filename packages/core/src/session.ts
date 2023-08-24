@@ -59,6 +59,7 @@ interface TransactionConfig {
 class Session {
   private readonly _mode: SessionMode
   private _database: string
+  private _databaseId?: string
   private readonly _reactive: boolean
   private readonly _fetchSize: number
   private readonly _readConnectionHolder: ConnectionHolder
@@ -150,7 +151,7 @@ class Session {
     this._lastBookmarks = bookmarks ?? Bookmarks.empty()
     this._configuredBookmarks = this._lastBookmarks
     this._transactionExecutor = _createTransactionExecutor(config)
-    this._databaseNameResolved = this._database !== ''
+    this._databaseNameResolved = false
     const calculatedWatermaks = this._calculateWatermaks()
     this._lowRecordWatermark = calculatedWatermaks.low
     this._highRecordWatermark = calculatedWatermaks.high
@@ -499,12 +500,13 @@ class Session {
    * @param {string|undefined} database The resolved database name
    * @returns {void}
    */
-  _onDatabaseNameResolved (database?: string): void {
+  _onDatabaseNameResolved (database?: string, databaseId?: string): void {
     if (!this._databaseNameResolved) {
-      const normalizedDatabase = database ?? ''
+      const normalizedDatabase =  database ?? ''
       this._database = normalizedDatabase
-      this._readConnectionHolder.setDatabase(normalizedDatabase)
-      this._writeConnectionHolder.setDatabase(normalizedDatabase)
+      this._databaseId = databaseId
+      this._readConnectionHolder.setDatabase(normalizedDatabase, databaseId)
+      this._writeConnectionHolder.setDatabase(normalizedDatabase, databaseId)
       this._databaseNameResolved = true
     }
   }

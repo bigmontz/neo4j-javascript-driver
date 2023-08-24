@@ -140,7 +140,7 @@ export default class RoutingConnectionProvider extends PooledConnectionProvider 
    * See {@link ConnectionProvider} for more information about this method and
    * its arguments.
    */
-  async acquireConnection ({ accessMode, database, bookmarks, impersonatedUser, onDatabaseNameResolved, auth } = {}) {
+  async acquireConnection ({ accessMode, database, bookmarks, impersonatedUser, onDatabaseNameResolved, auth, databaseId } = {}) {
     let name
     let address
     const context = { database: database || DEFAULT_DB_NAME }
@@ -188,6 +188,40 @@ export default class RoutingConnectionProvider extends PooledConnectionProvider 
 
     try {
       const connection = await this._connectionPool.acquire({ auth }, address)
+      if (connection.protocol().supportsPin() && databaseId == null ) {
+        connection.protocol().pinDatabase({ databaseName: database, impersonatedUser }, {
+          onCompleted: ({ db_id }) => {
+            context.database = context.database || db_id
+            console.log(`SETTING DB_ID TO ${db_id}`)
+            onDatabaseNameResolved(db_id, db_id)
+          }
+        })
+
+        connection.protocol().requestRoutingInformation({
+          routingContext: this._rediscovery._routingContext,
+          databaseName: database,
+          impersonatedUser,
+          sessionContext: {
+            bookmarks,
+            mode: accessMode,
+            database
+          },
+          onCompleted: (rawRoutingTable) => {
+            if (rawRoutingTable.isNull) {
+              return
+            }
+            const routingTable = RoutingTable.fromRawRoutingTable(
+              database,
+              connection.address,
+              rawRoutingTable
+            )
+            this._updateRoutingTable(routingTable)
+              .then(() => console.debug('Something in the way is working..'))
+              .catch((error) => this._log.error('Something smelling bad here', error))
+          }
+        })
+      }
+      
 
       if (auth) {
         await this._verifyStickyConnection({
@@ -362,7 +396,8 @@ export default class RoutingConnectionProvider extends PooledConnectionProvider 
     )
     return this._refreshRoutingTable(currentRoutingTable, bookmarks, impersonatedUser, auth)
       .then(newRoutingTable => {
-        onDatabaseNameResolved(newRoutingTable.database)
+        // TODO: FIND A WAY TO GET THE CONNECTION INFO :D 
+        //onDatabaseNameResolved(newRoutingTable.database)
         return newRoutingTable
       })
   }
