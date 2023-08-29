@@ -144,6 +144,8 @@ export default class RoutingConnectionProvider extends PooledConnectionProvider 
     let name
     let address
     const context = { database: database || DEFAULT_DB_NAME }
+    let seedRouterConnection
+    let connection
 
     const databaseSpecificErrorHandler = new ConnectionErrorHandler(
       SESSION_EXPIRED,
@@ -153,30 +155,44 @@ export default class RoutingConnectionProvider extends PooledConnectionProvider 
         this._handleAuthorizationExpired(error, address, conn, context.database)
     )
 
-    const routingTable = await this._freshRoutingTable({
-      accessMode,
-      database: context.database,
-      bookmarks,
-      impersonatedUser,
-      auth,
-      onDatabaseNameResolved: (databaseName) => {
-        context.database = context.database || databaseName
-        // if (onDatabaseNameResolved) {
-        //   onDatabaseNameResolved(databaseName)
-        // }
-      }
-    })
+    let routingTable = this._routingTableRegistry.getFromNameOrId(database, databaseId, null)
 
-    // select a target server based on specified access mode
-    if (accessMode === READ) {
-      address = this._loadBalancingStrategy.selectReader(routingTable.readers)
-      name = 'read'
-    } else if (accessMode === WRITE) {
-      address = this._loadBalancingStrategy.selectWriter(routingTable.writers)
-      name = 'write'
-    } else {
-      throw newError('Illegal mode ' + accessMode)
+    if (routingTable == null) {
+      seedRouterConnection = await this._connectionPool.acquire({ auth }, this._seedRouter)
+      if (!seedRouterConnection.protocol().supportsPin()) {
+        await seedRouterConnection._release()
+        routingTable = await this._freshRoutingTable({
+          accessMode,
+          database: context.database,
+          bookmarks,
+          impersonatedUser,
+          auth,
+          onDatabaseNameResolved: (databaseName) => {
+            context.database = context.database || databaseName
+            if (onDatabaseNameResolved) {
+              onDatabaseNameResolved(databaseName, databaseName)
+            }
+          }
+        })
+      } else {
+        address = this._seedRouter
+        connection = seedRouterConnection
+      }
     }
+
+    if (routingTable != null && address == null) {
+      // select a target server based on specified access mode
+      if (accessMode === READ) {
+        address = this._loadBalancingStrategy.selectReader(routingTable.readers)
+        name = 'read'
+      } else if (accessMode === WRITE) {
+        address = this._loadBalancingStrategy.selectWriter(routingTable.writers)
+        name = 'write'
+      } else {
+        throw newError('Illegal mode ' + accessMode)
+      }
+    }
+
 
     // we couldn't select a target server
     if (!address) {
@@ -187,14 +203,15 @@ export default class RoutingConnectionProvider extends PooledConnectionProvider 
     }
 
     try {
-      const connection = await this._connectionPool.acquire({ auth }, address)
+      if (connection == null) {
+        connection = await this._connectionPool.acquire({ auth }, address)
+      }
       if (connection.protocol().supportsPin() ) {
 
-        this._log.debug(`getting routing table for optimist routing with database=${context.database}`)
+        this._log.debug(`getting routing table for optimist routing with database=${context.database} and databaseId=${databaseId}`)
 
-        const routingTable = this._routingTableRegistry.get(context.database, null )
-
-        if (databaseId === null) {
+        if (databaseId == null) {
+          
           connection.protocol().pinDatabase({ databaseName: database, impersonatedUser }, {
             onCompleted: ({ db_id }) => {
               context.database = context.database || db_id
@@ -416,8 +433,7 @@ export default class RoutingConnectionProvider extends PooledConnectionProvider 
     )
     return this._refreshRoutingTable(currentRoutingTable, bookmarks, impersonatedUser, auth)
       .then(newRoutingTable => {
-        // TODO: FIND A WAY TO GET THE CONNECTION INFO :D 
-        onDatabaseNameResolved(newRoutingTable.database, "no_redirect")
+        onDatabaseNameResolved(newRoutingTable.database)
         return newRoutingTable
       })
   }
@@ -788,8 +804,15 @@ class RoutingTableRegistry {
       : defaultSupplier
   }
 
+  getFromNameOrId (database, databaseId, defaultSupplier) {
+    if (databaseId != null) {
+      return this.getFromId(databaseId, defaultSupplier)
+    }
+    return this.get(database, defaultSupplier)
+  }
+
   getFromId (databaseId, defaultSupplier) {
-    const [rt] = this._tables.filter(table => table.databaseId === databaseId)
+    const [rt] = this._filter((table) => table.databaseId === databaseId)
     if (rt) {
       return rt
     }
@@ -827,6 +850,16 @@ class RoutingTableRegistry {
       }
     }
     return this
+  }
+
+  _filter(predicate) {
+    const filteredValue = []
+    for(const [_, value] of this._tables) {
+      if (predicate(value)) {
+        filteredValue.push(value)
+      }
+    }
+    return filteredValue
   }
 }
 
