@@ -21,7 +21,7 @@ import BoltProtocolV5x3 from './bolt-protocol-v5x3'
 import transformersFactories from './bolt-protocol-v5x4.transformer'
 import Transformer from './transformer'
 import RequestMessage, { SIGNATURES } from './request-message'
-import { PinMessageObserver, UnpinMessageObserver, ResultStreamObserver } from './stream-observers'
+import { PinMessageObserver, UnpinMessageObserver, ResultStreamObserver, RouteObserver } from './stream-observers'
 
 import { internal } from 'neo4j-driver-core'
 
@@ -174,6 +174,43 @@ export default class BoltProtocol extends BoltProtocolV5x3 {
     if (!reactive) {
       this.write(RequestMessage.pull({ n: fetchSize }), observer, flush)
     }
+
+    return observer
+  }
+
+  /**
+  * Request routing information
+  *
+  * @param {Object} param -
+  * @param {object} param.routingContext The routing context used to define the routing table.
+  *  Multi-datacenter deployments is one of its use cases
+  * @param {string} param.databaseName The database name
+  * @param {Bookmarks} params.sessionContext.bookmarks The bookmarks used for requesting the routing table
+  * @param {function(err: Error)} param.onError
+  * @param {function(RawRoutingTable)} param.onCompleted
+  * @returns {RouteObserver} the route observer
+  */
+  requestRoutingInformation ({
+    routingContext = {},
+    databaseName = null,
+    impersonatedUser = null,
+    databaseId = null,
+    eTag = null,
+    sessionContext = {},
+    onError,
+    onCompleted
+  }) {
+    const observer = new RouteObserver({
+      onProtocolError: this._onProtocolError,
+      onError,
+      onCompleted
+    })
+    const bookmarks = sessionContext.bookmarks || Bookmarks.empty()
+    this.write(
+      RequestMessage.routeV5x4(eTag, routingContext, bookmarks.values(), { databaseName, impersonatedUser, databaseId }),
+      observer,
+      true
+    )
 
     return observer
   }

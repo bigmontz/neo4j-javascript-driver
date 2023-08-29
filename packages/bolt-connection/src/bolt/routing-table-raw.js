@@ -94,6 +94,14 @@ export default class RawRoutingTable {
   get isNull () {
     throw new Error('Not implemented')
   }
+
+  get eTag () {
+
+  }
+
+  get databaseId () {
+
+  }
 }
 
 /**
@@ -115,6 +123,14 @@ class ResponseRawRoutingTable extends RawRoutingTable {
 
   get db () {
     return this._response.rt.db
+  }
+
+  get databaseId () {
+    return this._response.rt.db_id
+  }
+
+  get eTag() {
+    return this._response.rt.e_tag
   }
 
   get isNull () {

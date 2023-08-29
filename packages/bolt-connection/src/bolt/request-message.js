@@ -421,6 +421,35 @@ export default class RequestMessage {
     )
   }
 
+  static routeV5x4 (eTag, routingContext = {}, bookmarks = [], databaseContext = {}) {
+    const dbContext = {}
+
+    if (databaseContext.databaseName) {
+      dbContext.db = databaseContext.databaseName
+    }
+
+    if (databaseContext.impersonatedUser) {
+      dbContext.imp_user = databaseContext.impersonatedUser
+    }
+
+    if (databaseContext.databaseId) {
+      dbContext.db_id = databaseContext.databaseId
+    }
+
+    if (eTag != null) {
+      dbContext.e_tag = eTag
+    }
+
+    return new RequestMessage(
+      ROUTE,
+      [routingContext, bookmarks, dbContext],
+      () =>
+        `ROUTE ${json.stringify(routingContext)} ${json.stringify(
+          bookmarks
+        )} ${json.stringify(dbContext)}`
+    )
+  }
+
   static pinDatabase ({ databaseName, impersonatedUser }) {
     const meta = {}
 

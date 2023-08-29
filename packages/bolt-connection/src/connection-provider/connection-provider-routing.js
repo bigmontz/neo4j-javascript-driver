@@ -161,9 +161,9 @@ export default class RoutingConnectionProvider extends PooledConnectionProvider 
       auth,
       onDatabaseNameResolved: (databaseName) => {
         context.database = context.database || databaseName
-        if (onDatabaseNameResolved) {
-          onDatabaseNameResolved(databaseName)
-        }
+        // if (onDatabaseNameResolved) {
+        //   onDatabaseNameResolved(databaseName)
+        // }
       }
     })
 
@@ -188,19 +188,31 @@ export default class RoutingConnectionProvider extends PooledConnectionProvider 
 
     try {
       const connection = await this._connectionPool.acquire({ auth }, address)
-      if (connection.protocol().supportsPin() && databaseId == null ) {
-        connection.protocol().pinDatabase({ databaseName: database, impersonatedUser }, {
-          onCompleted: ({ db_id }) => {
-            context.database = context.database || db_id
-            console.log(`SETTING DB_ID TO ${db_id}`)
-            onDatabaseNameResolved(db_id, db_id)
-          }
-        })
+      if (connection.protocol().supportsPin() ) {
+
+        this._log.debug(`getting routing table for optimist routing with database=${context.database}`)
+
+        const routingTable = this._routingTableRegistry.get(context.database, null )
+
+        if (databaseId === null) {
+          connection.protocol().pinDatabase({ databaseName: database, impersonatedUser }, {
+            onCompleted: ({ db_id }) => {
+              context.database = context.database || db_id
+              console.log(`SETTING DB_ID TO ${db_id}`)
+              onDatabaseNameResolved(db_id, db_id)
+            }
+          })
+        }
+
+        const rtId = routingTable != null ? routingTable.databaseId : databaseId
+        const eTag = routingTable != null ? routingTable.eTag : null
 
         connection.protocol().requestRoutingInformation({
           routingContext: this._rediscovery._routingContext,
           databaseName: database,
           impersonatedUser,
+          databaseId: rtId,
+          eTag,
           sessionContext: {
             bookmarks,
             mode: accessMode,
@@ -210,12 +222,20 @@ export default class RoutingConnectionProvider extends PooledConnectionProvider 
             if (rawRoutingTable.isNull) {
               return
             }
-            const routingTable = RoutingTable.fromRawRoutingTable(
+
+            if (rawRoutingTable.eTag != null && 
+                routingTable != null && routingTable.eTag === rawRoutingTable.eTag) {
+                this._log.debug('Updating routing table')
+                routingTable.updateFromRawRoutingTable(rawRoutingTable, address)
+                return; 
+            }
+            this._log.debug(`Updating full routing table since ${rawRoutingTable.eTag} != ${routingTable != null ? routingTable.eTag : 'no routing'}`)
+            const newRoutingTable = RoutingTable.fromRawRoutingTable(
               database,
               connection.address,
               rawRoutingTable
             )
-            this._updateRoutingTable(routingTable)
+            this._updateRoutingTable(newRoutingTable)
               .then(() => console.debug('Something in the way is working..'))
               .catch((error) => this._log.error('Something smelling bad here', error))
           }
@@ -397,7 +417,7 @@ export default class RoutingConnectionProvider extends PooledConnectionProvider 
     return this._refreshRoutingTable(currentRoutingTable, bookmarks, impersonatedUser, auth)
       .then(newRoutingTable => {
         // TODO: FIND A WAY TO GET THE CONNECTION INFO :D 
-        //onDatabaseNameResolved(newRoutingTable.database)
+        onDatabaseNameResolved(newRoutingTable.database, "no_redirect")
         return newRoutingTable
       })
   }
@@ -768,6 +788,16 @@ class RoutingTableRegistry {
       : defaultSupplier
   }
 
+  getFromId (databaseId, defaultSupplier) {
+    const [rt] = this._tables.filter(table => table.databaseId === databaseId)
+    if (rt) {
+      return rt
+    }
+    return typeof defaultSupplier === 'function'
+      ? defaultSupplier()
+      : defaultSupplier
+  }
+
   /**
    * Remove the routing table which is already expired
    * @returns {RoutingTableRegistry} this
@@ -813,6 +843,7 @@ function _isFailFastError (error) {
 }
 
 function _isFailFastSecurityError (error) {
+  console.error(error)
   return error.code.startsWith('Neo.ClientError.Security.') &&
     ![
       AUTHORIZATION_EXPIRED_CODE

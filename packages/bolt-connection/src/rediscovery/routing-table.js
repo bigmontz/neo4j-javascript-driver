@@ -39,26 +39,30 @@ const MIN_ROUTERS = 1
 export default class RoutingTable {
   constructor ({
     database,
+    databaseId,
     routers,
     readers,
     writers,
     expirationTime,
-    ttl
+    ttl,
+    eTag
   } = {}) {
     this.database = database || null
     this.databaseName = database || 'default database'
+    this.databaseId = databaseId
     this.routers = routers || []
     this.readers = readers || []
     this.writers = writers || []
     this.expirationTime = expirationTime || int(0)
     this.ttl = ttl
+    this.eTag = eTag
   }
 
   /**
    * Create a valid routing table from a raw object
    *
    * @param {string} database the database name. It is used for logging purposes
-   * @param {ServerAddress} routerAddress The router address, it is used for loggin purposes
+   * @param {ServerAddress} routerAddress The router address, it is used for login purposes
    * @param {RawRoutingTable} rawRoutingTable Method used to get the raw routing table to be processed
    * @param {RoutingTable} The valid Routing Table
    */
@@ -111,15 +115,23 @@ export default class RoutingTable {
     return [...this.routers, ...this.readers, ...this.writers]
   }
 
+  updateFromRawRoutingTable (rawRoutingTable, address) {
+    if (this.eTag === rawRoutingTable.eTag ) {
+      this.expirationTime = calculateExpirationTime(rawRoutingTable, address)
+    }
+  }
+
   toString () {
     return (
       'RoutingTable[' +
+      `eTag=${this.eTag}, ` +
       `database=${this.databaseName}, ` +
+      `databaseId=${this.databaseId}, ` +
       `expirationTime=${this.expirationTime}, ` +
       `currentTime=${Date.now()}, ` +
       `routers=[${this.routers}], ` +
       `readers=[${this.readers}], ` +
-      `writers=[${this.writers}]]`
+      `writers=[${this.writers}]]` 
     )
   }
 }
@@ -159,6 +171,8 @@ export function createValidRoutingTable (
 
   return new RoutingTable({
     database: database || rawRoutingTable.db,
+    databaseId: rawRoutingTable.databaseId,
+    eTag: rawRoutingTable.eTag,
     routers,
     readers,
     writers,
