@@ -56,6 +56,7 @@ export default function create ({
   disableLosslessIntegers,
   useBigInt,
   serversideRouting,
+  selectedFeatures,
   server, // server info
   log,
   observer
@@ -93,7 +94,8 @@ export default function create ({
     serversideRouting,
     createResponseHandler,
     observer.onProtocolError.bind(observer),
-    log
+    log,
+    selectedFeatures
   )
 }
 
@@ -105,7 +107,8 @@ function createProtocol (
   serversideRouting,
   createResponseHandler,
   onProtocolError,
-  log
+  log,
+  selectedFeatures
 ) {
   switch (version) {
     case 1:
@@ -221,7 +224,8 @@ function createProtocol (
         createResponseHandler,
         log,
         onProtocolError,
-        serversideRouting)
+        serversideRouting,
+        selectedFeatures)
     default:
       throw newError('Unknown Bolt protocol version: ' + version)
   }

@@ -42,7 +42,7 @@ function createHandshakeMessage (versions) {
       const { major, minor } = version[0]
       const { minor: minMinor } = version[1]
       const range = minor - minMinor
-      handshakeBuffer.writeInt32((range << 16) | (minor << 8) | major)
+      handshakeBuffer.writeInt32((0x01 << 24) | (range << 16) | (minor << 8) | major)
     } else {
       const { major, minor } = version
       handshakeBuffer.writeInt32((minor << 8) | major)
@@ -55,8 +55,52 @@ function createHandshakeMessage (versions) {
 }
 
 function parseNegotiatedResponse (buffer, log) {
+  const firstByte = buffer.readUInt8()
+
+  if (firstByte === 0x01) {
+    const versionsCount = buffer.readUInt8()
+    const versions = []
+    for (let i = 0; i < versionsCount; i++) {
+      const mode = buffer.readUInt8();
+      const _range = buffer.readUInt8();
+      const minor = buffer.readUInt8();
+      const major = buffer.readUInt8();
+      const features = []
+
+      if (mode == 0x01 ) {
+        const featuresCount = buffer.readUInt8()
+
+        for (let j = 0; i < featuresCount; i++) {
+          features.push(buffer.readUInt8())
+        }
+      }
+      versions.push([ mode, minor, major, features ])
+    }
+
+    const [selectedVersion] = versions
+    const [ _, minor, major, features ] = selectedVersion;
+
+    const selectedFeatures = features.filter(feature => [0x01, 0x03].includes(feature))
+    const featuresSize = selectedFeatures.length > 0 ? 1 + selectedFeatures.length : 0;
+    const mode = selectedFeatures.length > 0 ? 0x01 : 0x00
+
+    const output = alloc(4 + featuresSize);
+
+    output.writeUInt8(mode)
+    output.writeUInt8(0x00)
+    output.writeUInt8(minor)
+    output.writeUInt8(major)
+
+    if (mode == 0x01) {
+      output.writeUInt8(selectedFeatures.length)
+      selectedFeatures.forEach(selectedFeature => output.writeUInt8(selectedFeature))
+    }
+
+    return [Number(major + '.' + minor), selectedFeatures, output]
+  }
+
   const h = [
-    buffer.readUInt8(),
+    firstByte,
     buffer.readUInt8(),
     buffer.readUInt8(),
     buffer.readUInt8()
@@ -69,7 +113,7 @@ function parseNegotiatedResponse (buffer, log) {
         '(HTTP defaults to port 7474 whereas BOLT defaults to port 7687)'
     )
   }
-  return Number(h[3] + '.' + h[2])
+  return [Number(h[3] + '.' + h[2]), [],  null]
 }
 
 /**
@@ -116,10 +160,15 @@ export default function handshake (channel, log) {
     channel.onmessage = buffer => {
       try {
         // read the response buffer and initialize the protocol
-        const protocolVersion = parseNegotiatedResponse(buffer, log)
+        const [protocolVersion, selectedFeatures, nextMessage] = parseNegotiatedResponse(buffer, log)
+
+        if (nextMessage != null) {
+          channel.write(nextMessage)
+        }
 
         resolve({
           protocolVersion,
+          selectedFeatures,
           consumeRemainingBuffer: consumer => {
             if (buffer.hasRemaining()) {
               consumer(buffer.readSlice(buffer.remaining()))

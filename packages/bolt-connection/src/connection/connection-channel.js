@@ -54,7 +54,7 @@ export function createChannelConnection (
   const channel = createChannel(channelConfig)
 
   return Bolt.handshake(channel, log)
-    .then(({ protocolVersion: version, consumeRemainingBuffer }) => {
+    .then(({ protocolVersion: version, selectedFeatures, consumeRemainingBuffer }) => {
       const chunker = new Chunker(channel)
       const dechunker = new Dechunker()
       const createProtocol = conn =>
@@ -68,6 +68,7 @@ export function createChannelConnection (
           serversideRouting,
           server: conn.server,
           log: conn.logger,
+          selectedFeatures,
           observer: {
             onPendingObserversChange: conn._handleOngoingRequestsNumberChange.bind(conn),
             onError: conn._handleFatalError.bind(conn),

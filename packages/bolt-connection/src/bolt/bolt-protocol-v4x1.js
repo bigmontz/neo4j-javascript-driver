@@ -49,7 +49,8 @@ export default class BoltProtocol extends BoltProtocolV4 {
     createResponseHandler = () => null,
     log,
     onProtocolError,
-    serversideRouting
+    serversideRouting,
+    selectedFeatures
   ) {
     super(
       server,
@@ -57,7 +58,8 @@ export default class BoltProtocol extends BoltProtocolV4 {
       packstreamConfig,
       createResponseHandler,
       log,
-      onProtocolError
+      onProtocolError,
+      selectedFeatures
     )
     this._serversideRouting = serversideRouting
   }

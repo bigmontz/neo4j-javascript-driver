@@ -73,7 +73,8 @@ export default class BoltProtocol {
     { disableLosslessIntegers, useBigInt } = {},
     createResponseHandler = () => null,
     log,
-    onProtocolError
+    onProtocolError,
+    selectedFeatures
   ) {
     this._server = server || {}
     this._chunker = chunker
@@ -85,6 +86,7 @@ export default class BoltProtocol {
     this._fatalError = null
     this._lastMessageSignature = null
     this._config = { disableLosslessIntegers, useBigInt }
+    this._selectedFeatures = selectedFeatures || []
   }
 
   get transformer () {

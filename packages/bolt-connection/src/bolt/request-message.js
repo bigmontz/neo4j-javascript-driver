@@ -236,6 +236,43 @@ export default class RequestMessage {
     )
   }
 
+  static hello5x3NewStuff (userAgent, boltAgent, notificationFilter = null, routing = null, newStuff) {
+    const metadata = { }
+
+    if (userAgent) {
+      metadata.user_agent = userAgent
+    }
+
+    if (boltAgent) {
+      metadata.bolt_agent = {
+        product: boltAgent.product,
+        platform: boltAgent.platform,
+        language: boltAgent.language,
+        language_details: boltAgent.languageDetails
+      }
+    }
+
+    if (notificationFilter) {
+      if (notificationFilter.minimumSeverityLevel) {
+        metadata.notifications_minimum_severity = notificationFilter.minimumSeverityLevel
+      }
+
+      if (notificationFilter.disabledCategories) {
+        metadata.notifications_disabled_categories = notificationFilter.disabledCategories
+      }
+    }
+
+    if (routing) {
+      metadata.routing = routing
+    }
+
+    return new RequestMessage(
+      HELLO,
+      [metadata, newStuff],
+      () => `HELLO ${json.stringify(metadata)} ${json.stringify(newStuff)}`
+    )
+  }
+
   /**
    * Create a new LOGON message.
    *

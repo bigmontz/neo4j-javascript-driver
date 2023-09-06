@@ -62,11 +62,19 @@ export default class BoltProtocol extends BoltProtocolV5x2 {
       }
     })
 
-    this.write(
-      RequestMessage.hello5x3(userAgent, boltAgent, notificationFilter, this._serversideRouting),
-      observer,
-      false
-    )
+    if (this._selectedFeatures.includes(0x03)) {
+      this.write(
+        RequestMessage.hello5x3NewStuff(userAgent, boltAgent, notificationFilter, this._serversideRouting, 'a new stuff in the wire'),
+        observer,
+        false
+      )
+    } else {
+      this.write(
+        RequestMessage.hello5x3(userAgent, boltAgent, notificationFilter, this._serversideRouting),
+        observer,
+        false
+      )
+    }
 
     return this.logon({
       authToken,
