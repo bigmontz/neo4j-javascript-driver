@@ -1,6 +1,7 @@
 import os
 from common import (
     is_browser,
+    is_bun,
     is_deno,
     is_lite,
     run_in_driver_repo,
@@ -13,12 +14,11 @@ if __name__ == "__main__":
     os.environ["RUNNING_TIME_IN_SECONDS"] = \
         os.environ.get("TEST_NEO4J_STRESS_DURATION", 0)
 
-    if not is_browser():
+    if not is_browser() and not is_deno() and not is_bun():
         if is_lite():
             ignore = "--ignore=neo4j-driver"
         else:
             ignore = "--ignore=neo4j-driver-lite"
 
-        if not is_deno():
-            run_in_driver_repo(["npm", "run", "test::stress", "--", ignore],
-                               env=os.environ)
+        run_in_driver_repo(["npm", "run", "test::stress", "--", ignore],
+                           env=os.environ)

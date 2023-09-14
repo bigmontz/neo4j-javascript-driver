@@ -22,6 +22,8 @@ import { newError, error, json, internal, toNumber } from '../../core/index.ts'
 import Connection from './connection.js'
 import Bolt from '../bolt/index.js'
 
+console.log(Channel)
+
 const { PROTOCOL_ERROR } = error
 const {
   logger: { Logger }

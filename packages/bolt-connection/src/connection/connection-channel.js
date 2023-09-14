@@ -22,6 +22,8 @@ import { newError, error, json, internal, toNumber } from 'neo4j-driver-core'
 import Connection from './connection'
 import Bolt from '../bolt'
 
+console.log(Channel)
+
 const { PROTOCOL_ERROR } = error
 const {
   logger: { Logger }

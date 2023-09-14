@@ -105,6 +105,7 @@ function newHandshakeBuffer () {
 export default function handshake (channel, log) {
   return new Promise((resolve, reject) => {
     const handshakeErrorHandler = error => {
+      console.log('handshake error handler called')
       reject(error)
     }
 

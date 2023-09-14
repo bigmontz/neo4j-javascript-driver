@@ -16,17 +16,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+import { internal } from 'neo4j-driver-core'
 
-// Handling Bun runtime.
-import * as bunChannel from './bun'
+const {
+  resolver: { BaseHostNameResolver }
+} = internal
 
-export * from './node'
-export * from './chunking'
-export { default as ChannelConfig } from './channel-config'
-export { alloc } from './channel-buf'
-export { default as utf8 } from './utf8'
-if (typeof globalThis !== 'undefined') {
-  if (globalThis.process != null && globalThis.process.isBun && globalThis.Bun != null) {
-    module.exports = { ...module.exports, ...bunChannel }
+export default class BunHostNameResolver extends BaseHostNameResolver {
+  resolve (address) {
+    return this._resolveToItself(address)
   }
 }

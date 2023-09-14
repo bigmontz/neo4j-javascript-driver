@@ -2,6 +2,7 @@
 import os
 from common import (
     is_browser,
+    is_bun,
     is_deno,
     is_lite,
     run_in_driver_repo,
@@ -16,7 +17,7 @@ if __name__ == "__main__":
     else:
         ignore = "--ignore=neo4j-driver-lite"
 
-    if is_deno():
+    if is_deno() or is_bun():
         pass
     elif is_browser():
         run_in_driver_repo(["npm", "run", "test::browser",

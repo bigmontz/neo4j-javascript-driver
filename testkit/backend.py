@@ -6,8 +6,8 @@ Responsible for starting the test backend.
 from common import (
     open_proccess_in_driver_repo,
     is_browser,
+    is_bun,
     is_deno,
-    run_in_driver_repo
 )
 import os
 import time
@@ -17,6 +17,9 @@ if __name__ == "__main__":
     backend_script = "start-testkit-backend"
     if is_deno():
         backend_script = "start-testkit-backend::deno"
+
+    if is_bun():
+        backend_script = "start-testkit-backend::bun"
 
     if is_browser():
         print("Testkit should test browser")

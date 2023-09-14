@@ -48,5 +48,9 @@ def is_deno():
     return is_enabled(os.environ.get("TEST_DRIVER_DENO", "false"))
 
 
+def is_bun():
+    return is_enabled(os.environ.get("TEST_DRIVER_BUN", "false"))
+
+
 def is_team_city():
     return is_enabled(os.environ.get("TEST_IN_TEAMCITY", "false"))

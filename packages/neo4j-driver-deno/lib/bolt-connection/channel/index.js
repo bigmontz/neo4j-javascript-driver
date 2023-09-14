@@ -17,8 +17,16 @@
  * limitations under the License.
  */
 
+// Handling Bun runtime.
+import * as browserChannel from './browser/index.js'
+
 export * from './deno/index.js'
 export * from './chunking.js'
 export { default as ChannelConfig } from './channel-config.js'
 export { alloc } from './channel-buf.js'
 export { default as utf8 } from './utf8.js'
+if (typeof globalThis !== 'undefined') {
+  if (globalThis.process != null && globalThis.process.isBun && globalThis.Bun != null) {
+    module.exports = { ...module.exports, ...browserChannel }
+  }
+}

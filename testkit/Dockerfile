@@ -2,6 +2,7 @@ FROM ubuntu:20.04
 
 ARG NODE_VERSION=10
 ARG DENO_VERSION=1.19.3
+ARG BUN_VERSION=1.0.1
 
 ENV DEBIAN_FRONTEND noninteractive
 ENV NODE_OPTIONS --max_old_space_size=4096 --use-openssl-ca
@@ -53,6 +54,10 @@ RUN mv /root/.deno/bin/deno /usr/bin/
 # Using System CA in Deno
 ENV DENO_TLS_CA_STORE=system
 
+# Add Bun
+RUN curl -fsSL https://bun.sh/install | bash -s bun-v$BUN_VERSION
+RUN mv /root/.bun/bin/bun /usr/bin/
+
 # Creating an user for building the driver and running the tests
 RUN useradd -m driver && echo "driver:driver" | chpasswd && adduser driver sudo
 VOLUME /driver
@@ -70,3 +75,4 @@ RUN npm config set prefix /home/driver/.npm_global
 RUN node --version
 RUN npm --version
 RUN deno --version
+RUN bun --version

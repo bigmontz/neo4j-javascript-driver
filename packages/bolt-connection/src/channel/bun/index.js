@@ -17,16 +17,18 @@
  * limitations under the License.
  */
 
-// Handling Bun runtime.
-import * as bunChannel from './bun'
+import BunChannel from './bun-channel'
+import BunHostNameResolver from './bun-host-name-resolver'
 
-export * from './node'
-export * from './chunking'
-export { default as ChannelConfig } from './channel-config'
-export { alloc } from './channel-buf'
-export { default as utf8 } from './utf8'
-if (typeof globalThis !== 'undefined') {
-  if (globalThis.process != null && globalThis.process.isBun && globalThis.Bun != null) {
-    module.exports = { ...module.exports, ...bunChannel }
-  }
-}
+/*
+
+ This module exports a set of components to be used in deno environment.
+ They are not compatible with NodeJS environment.
+ All files import/require APIs from `node/index.js` by default.
+ Such imports are replaced at build time with `deno/index.js` when building a deno bundle.
+
+ NOTE: exports in this module should have exactly the same names/structure as exports in `node/index.js`.
+
+  */
+export const Channel = BunChannel
+export const HostNameResolver = BunHostNameResolver
