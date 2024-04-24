@@ -281,10 +281,11 @@ export default class RoutingConnectionProvider extends PooledConnectionProvider 
       getAddress: async () => {
         const context = { database: database || DEFAULT_DB_NAME }
 
-        const routingTable = await this._freshRoutingTable({
+        const { routingTable } = await this._freshRoutingTable({
           accessMode,
           database: context.database,
           auth,
+          optimistic: false,
           onDatabaseNameResolved: (databaseName) => {
             context.database = context.database || databaseName
           }
@@ -307,9 +308,10 @@ export default class RoutingConnectionProvider extends PooledConnectionProvider 
   async verifyConnectivityAndGetServerInfo ({ database, accessMode }) {
     const context = { database: database || DEFAULT_DB_NAME }
 
-    const routingTable = await this._freshRoutingTable({
+    const { routingTable } = await this._freshRoutingTable({
       accessMode,
       database: context.database,
+      optimistic: false,
       onDatabaseNameResolved: (databaseName) => {
         context.database = context.database || databaseName
       }
@@ -349,7 +351,7 @@ export default class RoutingConnectionProvider extends PooledConnectionProvider 
     })
   }
 
-  async _freshRoutingTable ({ accessMode, database, bookmarks, impersonatedUser, onDatabaseNameResolved, auth } = {}) {
+  async _freshRoutingTable ({ accessMode, database, bookmarks, optimistic, impersonatedUser, onDatabaseNameResolved, auth } = {}) {
     const currentRoutingTable = this._routingTableRegistry.get(
       database,
       () => new RoutingTable({ database })
@@ -359,21 +361,23 @@ export default class RoutingConnectionProvider extends PooledConnectionProvider 
       return { routingTable: currentRoutingTable }
     }
 
-    let optimisticRouting = true
-    const routers = this._routingTableRegistry.map((rt) => rt.routers).reduce((previous, current) => [...previous, ...current], [])
+    let optimisticRouting = optimistic !== false
 
-    if (routers.length > 0) {
-      for (const router of routers) {
-        const { done, connection, supportsOptimisticRouting } = await this._mayOptimisticRouting({
-          address: router, currentRoutingTable, database, bookmarks, impersonatedUser, onDatabaseNameResolved, auth
-        })
+    if (optimisticRouting) {
+      const routers = this._routingTableRegistry.map((rt) => rt.routers).reduce((previous, current) => [...previous, ...current], [])
+      if (routers.length > 0) {
+        for (const router of routers) {
+          const { done, connection, supportsOptimisticRouting } = await this._mayOptimisticRouting({
+            address: router, currentRoutingTable, database, bookmarks, impersonatedUser, onDatabaseNameResolved, auth
+          })
 
-        if (done && connection !== null) {
-          optimisticRouting = supportsOptimisticRouting
-          return connection
-        } else if (done) {
-          optimisticRouting = supportsOptimisticRouting
-          break
+          if (done && connection !== null) {
+            optimisticRouting = supportsOptimisticRouting
+            return { connection }
+          } else if (done) {
+            optimisticRouting = supportsOptimisticRouting
+            break
+          }
         }
       }
     }
