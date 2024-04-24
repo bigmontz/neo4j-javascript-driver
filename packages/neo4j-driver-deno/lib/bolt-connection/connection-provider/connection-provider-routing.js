@@ -83,7 +83,6 @@ export default class RoutingConnectionProvider extends PooledConnectionProvider 
     })
 
     this._routingContext = { ...routingContext, address: address.toString() }
-    this._seedRouter = address
     this._rediscovery = new Rediscovery(this._routingContext)
     this._loadBalancingStrategy = new LeastConnectedLoadBalancingStrategy(
       this._connectionPool
@@ -95,8 +94,11 @@ export default class RoutingConnectionProvider extends PooledConnectionProvider 
     this._routingTableRegistry = new RoutingTableRegistry(
       routingTablePurgeDelay
         ? int(routingTablePurgeDelay)
-        : DEFAULT_ROUTING_TABLE_PURGE_DELAY
+        : DEFAULT_ROUTING_TABLE_PURGE_DELAY,
+      address
     )
+
+    this._supportsOptimisticRouting = undefined
 
     this._refreshRoutingTable = functional.reuseOngoingRequest(this._refreshRoutingTable, this)
   }
@@ -152,12 +154,13 @@ export default class RoutingConnectionProvider extends PooledConnectionProvider 
         this._handleSecurityError(error, address, conn, context.database)
     )
 
-    const routingTable = await this._freshRoutingTable({
+    const { routingTable, connection } = await this._freshRoutingTable({
       accessMode,
       database: context.database,
       bookmarks,
       impersonatedUser,
       auth,
+      databaseSpecificErrorHandler,
       onDatabaseNameResolved: (databaseName) => {
         context.database = context.database || databaseName
         if (onDatabaseNameResolved) {
@@ -165,6 +168,10 @@ export default class RoutingConnectionProvider extends PooledConnectionProvider 
         }
       }
     })
+
+    if (connection != null) {
+      return new DelegateConnection(connection, databaseSpecificErrorHandler)
+    }
 
     // select a target server based on specified access mode
     if (accessMode === READ) {
@@ -342,23 +349,100 @@ export default class RoutingConnectionProvider extends PooledConnectionProvider 
     })
   }
 
-  _freshRoutingTable ({ accessMode, database, bookmarks, impersonatedUser, onDatabaseNameResolved, auth } = {}) {
+  async _freshRoutingTable ({ accessMode, database, bookmarks, impersonatedUser, onDatabaseNameResolved, auth } = {}) {
     const currentRoutingTable = this._routingTableRegistry.get(
       database,
       () => new RoutingTable({ database })
     )
 
     if (!currentRoutingTable.isStaleFor(accessMode)) {
-      return currentRoutingTable
+      return { routingTable: currentRoutingTable }
     }
+
+    let optimisticRouting = true
+    const routers = this._routingTableRegistry.map((rt) => rt.routers).reduce((previous, current) => [...previous, ...current], [])
+
+    if (routers.length > 0) {
+      for (const router of routers) {
+        const { done, connection, supportsOptimisticRouting } = await this._mayOptimisticRouting({
+          address: router, currentRoutingTable, database, bookmarks, impersonatedUser, onDatabaseNameResolved, auth
+        })
+
+        if (done && connection !== null) {
+          optimisticRouting = supportsOptimisticRouting
+          return connection
+        } else if (done) {
+          optimisticRouting = supportsOptimisticRouting
+          break
+        }
+      }
+    }
+
+    if (optimisticRouting) {
+      const seedRouters = await this._resolveSeedRouter(this._seedRouter)
+
+      for (const seedRouter of seedRouters) {
+        const { done, connection, supportsOptimisticRouting } = await this._mayOptimisticRouting({
+          address: seedRouter, currentRoutingTable, database, bookmarks, impersonatedUser, onDatabaseNameResolved, auth
+        })
+
+        if (done && connection !== null) {
+          optimisticRouting = supportsOptimisticRouting
+          return { connection }
+        } else if (done) {
+          optimisticRouting = supportsOptimisticRouting
+          break
+        }
+      }
+    }
+
     this._log.info(
       `Routing table is stale for database: "${database}" and access mode: "${accessMode}": ${currentRoutingTable}`
     )
     return this._refreshRoutingTable(currentRoutingTable, bookmarks, impersonatedUser, auth)
       .then(newRoutingTable => {
         onDatabaseNameResolved(newRoutingTable.database)
-        return newRoutingTable
+        return { routingTable: newRoutingTable }
       })
+  }
+
+  async _mayOptimisticRouting ({ auth, currentRoutingTable, address, database, bookmarks, impersonatedUser, onDatabaseNameResolved } = {}) {
+    let connection = null
+    try {
+      connection = await this._connectionPool.acquire({ auth }, address)
+    } catch (error) {
+      this._handleRediscoveryError(error, address)
+    }
+
+    if (connection !== null) {
+      if (connection.supportsOptimisticRouting) {
+        const sessionContext = connection.protocol().version < 4.0
+          ? { mode: WRITE, bookmarks: Bookmarks.empty() }
+          : { mode: READ, bookmarks: bookmarks || Bookmarks.empty(), database: SYSTEM_DB_NAME }
+        this._rediscovery.pipeRoutingRequestIntoConnection(
+          connection,
+          database,
+          address,
+          impersonatedUser,
+          sessionContext,
+          {
+            onCompleted: (rt) => {
+              if (rt) {
+                this._applyRoutingTableIfPossible(currentRoutingTable, rt, null)
+                  .then(rt => {
+                    onDatabaseNameResolved(rt.database)
+                  })
+              }
+            }
+          }
+        )
+
+        return { done: true, connection, supportsOptimisticRouting: true }
+      } else {
+        return { done: true, supportsOptimisticRouting: false }
+      }
+    }
+    return { done: false }
   }
 
   _refreshRoutingTable (currentRoutingTable, bookmarks, impersonatedUser, auth) {
@@ -657,6 +741,10 @@ export default class RoutingConnectionProvider extends PooledConnectionProvider 
     this._log.info(`Updated routing table ${newRoutingTable}`)
   }
 
+  get _seedRouter () {
+    return this._routingTableRegistry.seedRouter
+  }
+
   static _forgetRouter (routingTable, routersArray, routerIndex) {
     const address = routersArray[routerIndex]
     if (routingTable && address) {
@@ -673,7 +761,8 @@ class RoutingTableRegistry {
    * Constructor
    * @param {int} routingTablePurgeDelay The routing table purge delay
    */
-  constructor (routingTablePurgeDelay) {
+  constructor (routingTablePurgeDelay, seedRouter) {
+    this._seedRouter = seedRouter
     this._tables = new Map()
     this._routingTablePurgeDelay = routingTablePurgeDelay
   }
@@ -711,6 +800,21 @@ class RoutingTableRegistry {
   }
 
   /**
+   * Map tables to a disable object.
+   * The result will be a list of this new object
+   *
+   * @param {function<T>(r:RoutingTable):T} mapper Map Routing tables to T
+   * @returns {T[]}
+   */
+  map (mapper) {
+    const output = []
+    for (const [, value] of this._tables) {
+      output.push(mapper(value))
+    }
+    return output
+  }
+
+  /**
    * Retrieves a routing table from a given database name
    *
    * @param {string|impersonatedUser} impersonatedUser The impersonated User
@@ -725,6 +829,10 @@ class RoutingTableRegistry {
     return typeof defaultSupplier === 'function'
       ? defaultSupplier()
       : defaultSupplier
+  }
+
+  get seedRouter () {
+    return this._seedRouter
   }
 
   /**

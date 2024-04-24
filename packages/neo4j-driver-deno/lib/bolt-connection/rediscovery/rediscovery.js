@@ -43,34 +43,48 @@ export default class Rediscovery {
         database,
         routerAddress,
         impersonatedUser
-      ).then(rawRoutingTable => {
-        if (rawRoutingTable.isNull) {
-          return null
-        }
-        return RoutingTable.fromRawRoutingTable(
-          database,
-          routerAddress,
-          rawRoutingTable
-        )
-      })
+      )
+    })
+  }
+
+  pipeRoutingRequestIntoConnection (connection, database, routerAddress, impersonatedUser, sessionContext, { onCompleted, onError }) {
+    return connection.protocol().requestRoutingInformation({
+      routingContext: this._routingContext,
+      databaseName: database,
+      impersonatedUser,
+      sessionContext,
+      onCompleted: (rawRoutingTable) => {
+        const routingTable = !rawRoutingTable.isNull
+          ? RoutingTable.fromRawRoutingTable(
+            database,
+            routerAddress,
+            rawRoutingTable
+          )
+          : null
+        onCompleted(routingTable)
+      },
+      onError
     })
   }
 
   _requestRawRoutingTable (connection, session, database, routerAddress, impersonatedUser) {
     return new Promise((resolve, reject) => {
-      connection.protocol().requestRoutingInformation({
-        routingContext: this._routingContext,
-        databaseName: database,
+      this.pipeRoutingRequestIntoConnection(
+        connection,
+        database,
+        routerAddress,
         impersonatedUser,
-        sessionContext: {
+        {
           bookmarks: session._lastBookmarks,
           mode: session._mode,
           database: session._database,
           afterComplete: session._onComplete
         },
-        onCompleted: resolve,
-        onError: reject
-      })
+        {
+          onCompleted: resolve,
+          onError: reject
+        }
+      )
     })
   }
 }

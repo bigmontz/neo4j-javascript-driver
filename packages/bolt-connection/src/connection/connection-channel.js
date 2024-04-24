@@ -236,6 +236,11 @@ export default class ChannelConnection extends Connection {
     return this._creationTimestamp
   }
 
+  get supportsOptimisticRouting () {
+    // should return from feature or hint
+    return true
+  }
+
   /**
    * Send initialization message.
    * @param {string} userAgent the user agent for this driver.

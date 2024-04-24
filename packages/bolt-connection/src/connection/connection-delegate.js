@@ -105,6 +105,10 @@ export default class DelegateConnection extends Connection {
     return this._delegate.idleTimestamp
   }
 
+  get supportsOptimisticRouting () {
+    return this._delegate.supportsOptimisticRouting
+  }
+
   isOpen () {
     return this._delegate.isOpen()
   }

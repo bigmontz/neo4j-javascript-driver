@@ -63,6 +63,10 @@ export default class Connection extends CoreConnection {
     throw new Error('not implemented')
   }
 
+  get supportsOptimisticRouting () {
+    throw new Error('not implemented')
+  }
+
   /**
    * @returns {BoltProtocol} the underlying bolt protocol assigned to this connection
    */
