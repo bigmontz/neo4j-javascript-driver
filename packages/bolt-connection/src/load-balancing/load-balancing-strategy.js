@@ -36,4 +36,8 @@ export default class LoadBalancingStrategy {
   selectWriter (knownWriters) {
     throw new Error('Abstract function')
   }
+
+  selectRouter (knownRouters) {
+    return new Error('Abstract function')
+  }
 }

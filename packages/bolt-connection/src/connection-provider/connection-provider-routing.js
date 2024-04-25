@@ -364,20 +364,22 @@ export default class RoutingConnectionProvider extends PooledConnectionProvider 
     let optimisticRouting = optimistic !== false
 
     if (optimisticRouting) {
-      const routers = this._routingTableRegistry.map((rt) => rt.routers).reduce((previous, current) => [...previous, ...current], [])
+      const routers = this._routingTableRegistry.map((rt) => rt.routers).reduce((set, addresses) => {
+        for (const address of addresses) {
+          set.add(address)
+        }
+        return set
+      }, new Set())
       if (routers.length > 0) {
-        for (const router of routers) {
-          const { done, connection, supportsOptimisticRouting } = await this._mayOptimisticRouting({
-            address: router, currentRoutingTable, database, bookmarks, impersonatedUser, onDatabaseNameResolved, auth
-          })
+        const router = this._loadBalancingStrategy.selectRouter(routers)
 
-          if (done && connection !== null) {
-            optimisticRouting = supportsOptimisticRouting
-            return { connection }
-          } else if (done) {
-            optimisticRouting = supportsOptimisticRouting
-            break
-          }
+        const { connection, supportsOptimisticRouting } = await this._mayOptimisticRouting({
+          address: router, currentRoutingTable, database, bookmarks, impersonatedUser, onDatabaseNameResolved, auth
+        })
+
+        optimisticRouting = supportsOptimisticRouting
+        if (connection !== null) {
+          return { connection }
         }
       }
     }
@@ -411,42 +413,34 @@ export default class RoutingConnectionProvider extends PooledConnectionProvider 
   }
 
   async _mayOptimisticRouting ({ auth, currentRoutingTable, address, database, bookmarks, impersonatedUser, onDatabaseNameResolved } = {}) {
-    let connection = null
-    try {
-      connection = await this._connectionPool.acquire({ auth }, address)
-    } catch (error) {
-      this._handleRediscoveryError(error, address)
-    }
+    const connection = await this._connectionPool.acquire({ auth }, address)
 
-    if (connection !== null) {
-      if (connection.supportsOptimisticRouting) {
-        const sessionContext = connection.protocol().version < 4.0
-          ? { mode: WRITE, bookmarks: Bookmarks.empty() }
-          : { mode: READ, bookmarks: bookmarks || Bookmarks.empty(), database: SYSTEM_DB_NAME }
-        this._rediscovery.pipeRoutingRequestIntoConnection(
-          connection,
-          database,
-          address,
-          impersonatedUser,
-          sessionContext,
-          {
-            onCompleted: (rt) => {
-              if (rt) {
-                this._applyRoutingTableIfPossible(currentRoutingTable, rt, null)
-                  .then(rt => {
-                    onDatabaseNameResolved(rt.database)
-                  })
-              }
+    if (connection.supportsOptimisticRouting) {
+      const sessionContext = connection.protocol().version < 4.0
+        ? { mode: WRITE, bookmarks: Bookmarks.empty() }
+        : { mode: READ, bookmarks: bookmarks || Bookmarks.empty(), database: SYSTEM_DB_NAME }
+      this._rediscovery.pipeRoutingRequestIntoConnection(
+        connection,
+        database,
+        address,
+        impersonatedUser,
+        sessionContext,
+        {
+          onCompleted: (rt) => {
+            if (rt) {
+              this._applyRoutingTableIfPossible(currentRoutingTable, rt, null)
+                .then(rt => {
+                  onDatabaseNameResolved(rt.database)
+                })
             }
           }
-        )
+        }
+      )
 
-        return { done: true, connection, supportsOptimisticRouting: true }
-      } else {
-        return { done: true, supportsOptimisticRouting: false }
-      }
+      return { connection, supportsOptimisticRouting: true }
+    } else {
+      return { supportsOptimisticRouting: false }
     }
-    return { done: false }
   }
 
   _refreshRoutingTable (currentRoutingTable, bookmarks, impersonatedUser, auth) {

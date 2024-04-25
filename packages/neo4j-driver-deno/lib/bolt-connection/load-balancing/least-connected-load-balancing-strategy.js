@@ -26,6 +26,7 @@ export default class LeastConnectedLoadBalancingStrategy extends LoadBalancingSt
     super()
     this._readersIndex = new RoundRobinArrayIndex()
     this._writersIndex = new RoundRobinArrayIndex()
+    this._routersIndex = new RoundRobinArrayIndex()
     this._connectionPool = connectionPool
   }
 
@@ -41,6 +42,10 @@ export default class LeastConnectedLoadBalancingStrategy extends LoadBalancingSt
    */
   selectWriter (knownWriters) {
     return this._select(knownWriters, this._writersIndex)
+  }
+
+  selectRouter (knownRouters) {
+    return this._select(knownRouters, this._routersIndex)
   }
 
   _select (addresses, roundRobinIndex) {
